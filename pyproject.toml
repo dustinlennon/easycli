@@ -1,0 +1,26 @@
+[project]
+name = "easycli"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Dustin Lennon",email = "dustin.lennon@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    'pydantic (==2.13.5)',
+    'pyyaml (==6.0.3)'
+]
+
+[tool.poetry]
+packages = [
+    {include = "easycli", from = "src"}
+]
+
+include = [
+    { path = "tests", format = "sdist" }
+]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
