@@ -1,25 +1,35 @@
-from pydantic import BaseModel
-from typing import Union
+from pydantic import (
+  BaseModel,
+  Field
+)
 
-class Uc(BaseModel):
-  c1: int
-  u0: int
+from typing import (
+  Literal,
+  Optional,
+  Union
+)
 
-class Ts(BaseModel):
-  s1: int
-  s2: int
+class Span(BaseModel):
+  length    : int
+  width     : int
 
-class Uk(BaseModel):
-  k1: Ts
-  u0: int
+class Imperial(BaseModel):
+  system    : Literal['FPS']
+  time      : float
+  span      : Optional[Span] = None
+
+class Metric(BaseModel):
+  system    : Literal['MKS']
+  time      : float
+  span      : Span
 
 class Tb(BaseModel):
-  b1: int
-  b2: int
+  b1        : int
+  b2        : int
 
 class SimpleConfig(BaseModel):
-  a1: int
-  a2: Tb
-  a3: Union[Uc, Uk]
-  a2_b1: int
-  a3_c1: int
+  a1        : int
+  a2        : Tb
+  a3        : Union[Metric, Imperial] = \
+                Field(discriminator='system')
+  a2_b1     : int

@@ -1,2 +1,2 @@
 #!/usr/bin/bash
-pipenv run python3 "$@"
+poetry run python3 "$@"
