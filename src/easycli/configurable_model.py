@@ -18,8 +18,6 @@ from typing import (
 import warnings
 import yaml
 
-# from easycli.utils.recursive_update import recursive_update
-
 from .ambiguity_tree import AmbiguityTree
 from .exceptions import (
   AmbiguousAssignmentError,

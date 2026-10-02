@@ -7,9 +7,20 @@ authors = [
 ]
 readme = "README.md"
 requires-python = ">=3.12"
+
+# Use scripts/versioning.py to pull dependencies from pipenv
+
 dependencies = [
-    'pydantic (==2.13.5)',
-    'pyyaml (==6.0.3)'
+  'pydantic (==2.13.5)', 
+  'pyyaml (==6.0.3)'
+]
+
+[dependency-groups]
+dev = [
+  'pytest (==9.1.1)', 
+  'fastapi (==0.142.2)', 
+  'uvicorn (==0.54.0)', 
+  'erdantic (==1.2.1)'
 ]
 
 [tool.poetry]
@@ -24,3 +35,4 @@ include = [
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+

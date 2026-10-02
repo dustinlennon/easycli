@@ -1,6 +1,5 @@
 /.env
 /dist/*
-/ipy
-
-/scripts/versioning.py
 /.vscode/*
+
+*png

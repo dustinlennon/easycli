@@ -8,12 +8,11 @@ import pytest
 import textwrap
 from typing import ClassVar
 
-from easycli.configurable.model import ConfigurableModel
-from easycli.configurable.exceptions import (
+from easycli.exceptions import(
   AmbiguousAssignmentError,
   UnassignableError
 )
-from easycli.configurable.ambiguity_tree import AmbiguityTree
+from easycli.ambiguity_tree import AmbiguityTree
 from easycli.utils.json_encoder import TypenameJSONEncoder
 
 #
@@ -23,7 +22,7 @@ class Stem(BaseModel):
   one             : int
   three           : int
 
-class Mix(ConfigurableModel, BaseModel):
+class Mix(BaseModel):
   env_prefix      : ClassVar[str] = "TKAP_MIX_"
   stem            : Stem
   stem_one        : int
@@ -47,63 +46,6 @@ def mix_config():
   return mix_config
 
 
-# class TestEnvFieldPairs:
-
-#   #
-#   # > test_stem_one
-#   #
-#   def test_stem_one(self):
-#     env = dict(TKAP_MIX_STEM_ONE = 1)
-#     efp = list(Mix.env_field_pairs(env = env))
-
-#     assert efp[0][0][0] == 'TKAP_MIX_STEM_ONE'
-#     assert efp[0][0][1] == 1
-#     assert efp[0][1]    == 'stem'
-
-#     assert efp[1][0][0] == 'TKAP_MIX_STEM_ONE'
-#     assert efp[1][0][1] == 1
-#     assert efp[1][1]    == 'stem_one'
-
-#   #
-#   # > test_stem_two
-#   #
-
-#   def test_stem_two(self):
-#     env = dict(TKAP_MIX_STEM_TWO = 2)
-#     efp = list(Mix.env_field_pairs(env = env))
-
-#     assert efp[0][0][0] == 'TKAP_MIX_STEM_TWO'
-#     assert efp[0][0][1] == 2
-#     assert efp[0][1]    == 'stem'
-
-#     assert efp[1][0][0] == 'TKAP_MIX_STEM_TWO'
-#     assert efp[1][0][1] == 2
-#     assert efp[1][1]    == 'stem_two'
-
-#   #
-#   # > test_stem_three
-#   #
-
-#   def test_stem_three(self):
-#     env = dict(TKAP_MIX_STEM_THREE = 3)
-#     efp = list(Mix.env_field_pairs(env = env))
-
-#     assert efp[0][0][0] == 'TKAP_MIX_STEM_THREE'
-#     assert efp[0][0][1] == 3
-#     assert efp[0][1]    == 'stem'
-
-#   #
-#   # > test_stem_four
-#   #
-#   def test_stem_four(self):
-#     env = dict(TKAP_MIX_STEM_FOUR = 4)
-#     efp = list(Mix.env_field_pairs(env = env))
-
-#     assert efp[0][0][0] == 'TKAP_MIX_STEM_FOUR'
-#     assert efp[0][0][1] == 4
-#     assert efp[0][1]    == 'stem'
-
-
 class TestAmbiguityTree:
 
   def print_rtree(self, rtree):
@@ -118,6 +60,7 @@ class TestAmbiguityTree:
   #
   def test_build_stem_one(self):
     atree = AmbiguityTree._build(Mix, "STEM_ONE")
+    print(atree)
     assert atree[Mix]['stem'][Stem]['one'] is None
     assert atree[Mix]['stem_one'] is None
 

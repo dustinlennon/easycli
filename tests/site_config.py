@@ -1,7 +1,8 @@
 from pydantic import (
   BaseModel,
   BeforeValidator,
-  Field
+  Field,
+  ValidationError
 )
 import tempfile
 from typing import (
@@ -22,12 +23,14 @@ def tempdir_factory(prefix):
 # ensure_logpath
 #
 def ensure_logpath(value):
-  if isinstance(value, str):
-    return PermanentLogging(permanent = True, path = value)
-  elif value is None:
-    return TemporaryLogging()
-  else:
+  if isinstance(value, dict):
     return value
+  elif isinstance(value, str):
+    return PermanentLogfile(path = value)
+  elif value is None:
+    return TemporaryLogfile()
+  else:
+    raise ValueError(f"unsupported logfile type: '{type(value).__name__}'")
 
 #
 # SslConfig
@@ -47,18 +50,18 @@ class HttpConfig(BaseModel):
   port                : int = 80
 
 #
-# PermanentLogging
+# PermanentLogfile
 #
-class PermanentLogging(BaseModel):
-  permanent   : Literal[True]
+class PermanentLogfile(BaseModel):
+  permanent   : Literal[True] = True
   path        : str
 
 #
-# TemporaryLogging
+# TemporaryLogfile
 #
-class TemporaryLogging(BaseModel):
+class TemporaryLogfile(BaseModel):
   permanent   : Literal[False] = False
-  prefix      : str = "tkap."
+  prefix      : str = "EasyCliExample."
   path        : str = Field(default_factory = lambda data: tempdir_factory(data['prefix']))
 
 #
@@ -69,8 +72,8 @@ class SiteConfig(BaseModel):
   server              : Union[HttpConfig, SslConfig] \
                           = Field(discriminator='connection')
 
-  logging             : Annotated[
-                          Union[PermanentLogging, TemporaryLogging],
+  logfile             : Annotated[
+                          Union[PermanentLogfile, TemporaryLogfile],
                           BeforeValidator(ensure_logpath)
                         ] \
-                          = Field(default_factory = TemporaryLogging, discriminator='permanent')
+                          = Field(default_factory = TemporaryLogfile, discriminator='permanent')

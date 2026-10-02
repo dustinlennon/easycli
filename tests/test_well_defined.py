@@ -1,19 +1,18 @@
-from collections import defaultdict
 import json
 import pytest
 import textwrap
 import yaml
 
-from easycli.configurable.ambiguity_tree import AmbiguityTree
+from easycli.ambiguity_tree import AmbiguityTree
 
-from .config_models import *
+from .site_config import *
 
 #
 # fixtures
 #
 
 @pytest.fixture
-def site_config():
+def site_config() -> SiteConfig:
   obj = yaml.safe_load(
     textwrap.dedent(
       """
@@ -36,30 +35,92 @@ def site_config():
 #
 class TestAmbiguityTree:
 
-  def test_assign_on_model_type(self):
-    incremental_config = AmbiguityTree.assign(
-      SiteConfig,
+  def test_from_model_type(self):
+    incremental_config = AmbiguityTree.assign(SiteConfig, {})
+
+    assert isinstance(incremental_config, dict)
+    assert not incremental_config
+
+  def test_from_model_instance(self, site_config: SiteConfig):
+    updated_config = AmbiguityTree.assign(site_config, {})
+
+    assert isinstance(updated_config, SiteConfig)
+    assert updated_config == site_config
+
+  def test_scalar_assign(self, site_config: SiteConfig):
+    updated_config = AmbiguityTree.assign(
+      site_config,
       {
-        'SERVER_CONNECTION' : 'http'
+        'PIDFILE' : '/tmp/site.pid'
       }
     )
-    assert incremental_config['server']['connection'] == 'http'
+    assert isinstance(updated_config, SiteConfig)
+    assert updated_config.pidfile == '/tmp/site.pid'
 
-  def test_assign_on_model_instance(self, site_config: SiteConfig):
-    assert isinstance(site_config.server, SslConfig)
-
-    site = AmbiguityTree.assign(
+  def test_union_assign(self, site_config: SiteConfig):
+    updated_config = AmbiguityTree.assign(
       site_config,
       {
         'SERVER_CONNECTION' : 'http'
       }
     )
+    assert isinstance(updated_config, SiteConfig)
+    assert isinstance(site_config.server, SslConfig)
+    assert isinstance(updated_config.server, HttpConfig)
+    assert updated_config.server.connection == 'http'
 
-    assert isinstance(site, SiteConfig)
-    assert isinstance(site.server, HttpConfig)
-    # assert isinstance(site.logging, TemporaryLogging)
-    # assert site.logging.path.startswith("/tmp/tkap.")
+  def test_logpath_assign_none(self, site_config: SiteConfig):
+    updated_config = AmbiguityTree.assign(
+      site_config,
+      {
+        'LOGFILE' : None
+      }
+    )
 
-  # def test_resolvable_union(self):
-  #   atree = AmbiguityTree(SiteConfig, "SERVER_CONNECTION", AmbiguityTree._INIT_TOKEN)
-  #   print(atree)
+    assert isinstance(updated_config.logfile, TemporaryLogfile)
+    assert updated_config.logfile.path.startswith("/tmp/EasyCliExample")
+
+  def test_logpath_assign_int(self, site_config: SiteConfig):
+    with pytest.raises(ValidationError):
+      AmbiguityTree.assign(
+        site_config,
+        {
+          'LOGFILE' : 42
+        }
+      )
+
+  def test_logpath_assign_str(self, site_config: SiteConfig):
+    updated_config = AmbiguityTree.assign(
+      site_config,
+      {
+        'LOGFILE' : '/tmp/EasycliExample.log'
+      }
+    )
+
+    assert isinstance(updated_config.logfile, PermanentLogfile)
+
+  def test_logpath_assign_perm(self, site_config: SiteConfig):
+    updated_config = AmbiguityTree.assign(
+      site_config,
+      {
+        'LOGFILE_PERMANENT': True,
+        'LOGFILE_PATH': '/tmp/EasycliExample.log'
+      }
+    )
+
+    assert isinstance(updated_config.logfile, PermanentLogfile)
+    assert updated_config.logfile.path == '/tmp/EasycliExample.log'
+
+  def test_logpath_assign_json(self, site_config: SiteConfig):
+    updated_config = AmbiguityTree.assign(
+      site_config,
+      {
+        'LOGFILE' : json.dumps({
+          'permanent': True,
+          'path': '/tmp/EasycliExample.log'
+        })
+      }
+    )
+
+    assert isinstance(updated_config.logfile, PermanentLogfile)
+    assert updated_config.logfile.path == '/tmp/EasycliExample.log'    

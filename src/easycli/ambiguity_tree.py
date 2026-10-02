@@ -17,8 +17,8 @@ from .exceptions import (
   AmbiguousAssignmentError,
   UnassignableError
 )
-from easycli.utils.recursive_update import recursive_update
-from easycli.utils.json_encoder import TypenameJSONEncoder
+from .utils.recursive_update import recursive_update
+from .utils.json_encoder import TypenameJSONEncoder
 
 #
 # > AmbiguityTree
@@ -244,6 +244,8 @@ class AmbiguityTree(object):
 
     fac = self._assigned_field_count(node)
 
+    import pdb; pdb.set_trace()
+
     if fac == 0:
       raise UnassignableError(
         ":{0} {1}".format(
@@ -294,7 +296,10 @@ class AmbiguityTree(object):
 
     """
     if not isinstance(root, dict):
-      node[key] = value
+      try:
+        node[key] = json.loads(value)
+      except json.JSONDecodeError:
+        node[key] = value
 
     else:
       node[key] = dict()
