@@ -1,36 +1,19 @@
-from collections import defaultdict
-import itertools
-import json
+import argparse
+import io
 import os
 from pydantic import (
   BaseModel,
-  ConfigDict,
-  ValidationError
+  ConfigDict
 )
-from types import SimpleNamespace
 from typing import (
-  get_args,
-  Iterator,
   Protocol,
-  Tuple,
-  TYPE_CHECKING
+  TYPE_CHECKING,
+  Union
 )
 import warnings
 import yaml
 
-from .ambiguity_tree import AmbiguityTree
-from .exceptions import (
-  AmbiguousAssignmentError,
-  UnassignableError
-)
-
-#
-# yaml setup
-#
-try:
-  from yaml import CLoader as Loader, CDumper as Dumper
-except ImportError:
-  from yaml import Loader, Dumper
+from easycli.configuration_builder import ConfigurationBuilder
 
 #
 # linter setup
@@ -50,45 +33,62 @@ warnings.formatwarning = custom_formatwarning
 # > ConfigurableModel
 #
 class ConfigurableModel(object):
+  prefix: str
   model_config = ConfigDict(validate_assignment=True)
 
-  @classmethod
-  def from_yamlfile[T](cls: type[T], yamlfile) -> T:
-    with open(yamlfile) as fp:
-      data = yaml.load(fp, Loader = Loader)
-    return cls(**data)
+  def __init__(self, **kwargs):
+    super().__init__(**kwargs)
+    ModelType = type(self)
+    self._builder = ConfigurationBuilder.build(ModelType)
 
   @classmethod
-  def from_buffer[T](cls: type[T], buffer) -> T:
-    data = yaml.safe_load(buffer)
-    return cls(**data)
+  def from_yaml[T:ConfigurableInstance](
+      cls: type[T],
+      yaml: str
+    ) -> T:
+    instance = cls.from_yaml_source(
+      io.StringIO(yaml)
+    )
+    return instance
 
   @classmethod
-  def fields[T:BaseModel](cls: type[T]) -> Iterator[str]:
-    return cls.model_fields.keys()
+  def from_yaml_source[T:ConfigurableInstance](
+      cls: type[T],
+      yaml_source: Union[str, io.TextIOBase]
+    ) -> T:
+    if isinstance(yaml_source, io.TextIOBase):
+      obj = yaml.safe_load(yaml_source)
+    else:
+      with open(yaml_source) as fp:
+        obj = yaml.safe_load(fp)       
+    return cls(**obj)
 
-  # @classmethod
-  # def env_field_pairs(cls, env):
-  #   tkap_env = { k:v for k,v in env.items() if k.startswith("TKAP") }
+  def update_from_dict[T:ConfigurableInstance](
+      self: T,
+      args: dict[str, str],
+      *,
+      fallback: bool,
+      discard: bool
+    ) -> T:
+    assignment_set = { 
+      k.removeprefix(self.prefix):v
+      for k,v in args.items()
+      if k.startswith(self.prefix)
+    }
+    return self._builder.apply_assignments(self, assignment_set, fallback = fallback, discard = discard)
 
-  #   def test_func(env_kvp: Tuple[str,str], field_name: str):
-  #     return env_kvp[0].removeprefix(cls.env_prefix).startswith(field_name.upper())
-    
-  #   env_kvpairs = [ (k,v) for k,v in tkap_env.items() ]
+  def update_from_env[T:ConfigurableInstance](
+      self: T,
+      env = None
+    ) -> T:
+    env = os.environ.copy() if env is None else env
+    return self.update_from_dict(env, fallback = False, discard = False)
 
-  #   return filter(
-  #     lambda p: test_func(*p),
-  #     itertools.product(env_kvpairs, cls.model_fields.keys())
-  #   )
-
-  def update_from_env[T:ConfigurableInstance](self: T, env = None) -> T:
-    raise NotImplementedError("update_from_env: awaiting AmbiguityTree refactor")
-    cls = type(self)
-    env = os.environ if env is None else env
-   
-    # efp = list(cls.env_field_pairs(env))
-
-
-  def update_from_args[T:ConfigurableInstance](self: T, args: SimpleNamespace) -> T:
-    raise NotImplementedError("update_from_args: awaiting AmbiguityTree refactor")
+  def update_from_args[T:ConfigurableInstance](
+      self: T,
+      args: argparse.Namespace,
+      fallback: bool = True,
+      discard: bool = False
+    ) -> T:
+      return self.update_from_dict(vars(args), fallback = True, discard = False)
 

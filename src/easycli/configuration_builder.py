@@ -24,7 +24,10 @@ from easycli.exceptions import (
 
 
 class ConfigurationBuilder[B:BaseModel]:
-  def __init__(self, trie):
+  def __init__(
+      self,
+      trie: Trie
+    ):
     warnings.warn("ConfigurationBuilder.__init__ is not intended to be called directly in client code")
     self.trie = trie
 
@@ -35,7 +38,10 @@ class ConfigurationBuilder[B:BaseModel]:
     return json.dumps(self.trie.root, cls = TrieNodeEncoder)
 
   @classmethod
-  def build[M:BaseModel](cls, ModelType: Type[M]) -> "ConfigurationBuilder[M]":
+  def build[M:BaseModel](
+      cls,
+      ModelType: Type[M]
+    ) -> "ConfigurationBuilder[M]":
     trie = Trie()
 
     for pk in cls._path_search(ModelType):
@@ -103,26 +109,46 @@ class ConfigurationBuilder[B:BaseModel]:
       partial_configs.append(pc)
 
     compiled_config = functools.reduce(
-      recursive_update, 
+      functools.partial(recursive_update, discard = False, fallback = False), 
       partial_configs,
       dict()
     )
 
     return compiled_config
   
-  def apply_assignments(self, model_instance: B, assignment_set) -> B:
+  def apply_assignments(
+      self,
+      model_instance: B,
+      assignment_set,
+      *,
+      discard,
+      fallback,
+    ) -> B:
     ModelType = type(model_instance)
     incremental_config  = self.compile_assignments(assignment_set)
-    updated_config      = recursive_update(model_instance.model_dump(), incremental_config)   
+    updated_config      = recursive_update(
+      model_instance.model_dump(),
+      incremental_config, 
+      discard = discard,
+      fallback = fallback
+    )
     return ModelType.model_validate(updated_config)
 
   @overload
   @classmethod
-  def assign[M:BaseModel](cls, instance_or_type: M, assignment_set: Dict[str,Any]) -> M: ...
+  def assign[M:BaseModel](
+    cls,
+    instance_or_type: M,
+    assignment_set: Dict[str,Any]
+  ) -> M: ...
 
   @overload
   @classmethod
-  def assign[M:BaseModel](cls, instance_or_type: type[M], assignment_set: Dict[str,Any]) -> Dict: ...
+  def assign[M:BaseModel](
+    cls,
+    instance_or_type: type[M],
+    assignment_set: Dict[str,Any]
+  ) -> Dict: ...
 
   @classmethod
   def assign[M:BaseModel](
@@ -142,12 +168,13 @@ class ConfigurationBuilder[B:BaseModel]:
 
     else:
       raise TypeError(
-        f"AmbiguityTree.assign: 'instance_or_type' must be an instance of subclass of BaseModel: {type(T)}"
+        f"'instance_or_type' must be an instance or subclass of BaseModel: {type(T)}"
       )
 
     instance = cls.build(ModelType)
+
     incremental_config  = instance.compile_assignments(assignment_set)
-    updated_config      = recursive_update(model_dict, incremental_config)   
+    updated_config      = recursive_update(model_dict, incremental_config, discard = False, fallback = False)
 
     if cast_to_base_model == True:
       result = ModelType(**updated_config)
@@ -155,3 +182,4 @@ class ConfigurationBuilder[B:BaseModel]:
       result = updated_config
 
     return result
+

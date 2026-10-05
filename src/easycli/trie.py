@@ -83,10 +83,3 @@ class Trie:
     return self.root[key]
 
 
-if __name__ == '__main__':
-  from easycli.trie import TrieNode
-  from easycli.configuration_builder import ConfigurationBuilder
-  from tests.test_simple_config import SimpleConfig
-  builder = ConfigurationBuilder.build(SimpleConfig)
-
-  print(builder)

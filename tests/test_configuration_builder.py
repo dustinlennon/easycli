@@ -35,9 +35,9 @@ def model_instance():
   return SimpleConfig(**yamlobj)
 
 #
-# > TestSimpleConfig
+# > TestConfigurationBuilder
 #
-class TestSimpleConfig:
+class TestConfigurationBuilder:
   def test_build(
       self,
       builder: ConfigurationBuilder[SimpleConfig]
@@ -92,7 +92,7 @@ class TestSimpleConfig:
       'A2_B2': 0,
     }
     with pytest.raises(ValueError):
-      partial_config = builder.compile_assignments(assignment_set)
+      builder.compile_assignments(assignment_set)
 
   def test_apply_assignments(
       self,
@@ -103,7 +103,8 @@ class TestSimpleConfig:
       'A2_B2': 0,
       'A3_TIME': 10
     }
-    updated_model = builder.apply_assignments(model_instance, assignment_set)
+    updated_model = builder.apply_assignments(model_instance, assignment_set, discard = False, fallback = False)
+
     assert updated_model.a2.b2 == 0
     assert isinstance(updated_model.a3, Imperial)
     assert updated_model.a3.time == 10
@@ -121,7 +122,7 @@ class TestSimpleConfig:
       'A3_SPAN_WIDTH': 6
     }
     
-    updated_model = builder.apply_assignments(model_instance, assignment_set)
+    updated_model = builder.apply_assignments(model_instance, assignment_set, discard = False, fallback = False)
     assert isinstance(updated_model.a3, Metric)
     assert updated_model.a3.span.length == 5
     assert updated_model.a3.span.width == 6
@@ -135,7 +136,7 @@ class TestSimpleConfig:
       'A3_SYSTEM': 'MKS'
     }
     with pytest.raises(ValidationError):
-      updated_model = builder.apply_assignments(model_instance, assignment_set)
+      updated_model = builder.apply_assignments(model_instance, assignment_set, discard = False, fallback = False)
 
   def test_apply_assignments_dict(
       self,
@@ -151,7 +152,7 @@ class TestSimpleConfig:
         }
       }
     }  
-    updated_model = builder.apply_assignments(model_instance, assignment_set)
+    updated_model = builder.apply_assignments(model_instance, assignment_set, discard = False, fallback = False)
     assert isinstance(updated_model.a3, Metric)
     assert updated_model.a3.span.length == 5
     assert updated_model.a3.span.width == 6
@@ -164,7 +165,7 @@ class TestSimpleConfig:
     assignment_set = {
       'A3': '{"system":"MKS","time":60.0,"span":{"length":5,"width":6}}'
     }
-    updated_model = builder.apply_assignments(model_instance, assignment_set)
+    updated_model = builder.apply_assignments(model_instance, assignment_set, discard = False, fallback = False)
     assert isinstance(updated_model.a3, Metric)
     assert updated_model.a3.span.length == 5
     assert updated_model.a3.span.width == 6
@@ -191,4 +192,16 @@ class TestSimpleConfig:
     assert updated_model.a2.b2 == 42
     assert updated_model.a3.system == 'FPS'
     assert isinstance(updated_model.a3, Imperial)
+
+  def test_assign(
+      self,
+      model_instance: SimpleConfig
+    ):
+    assignment_set = {
+      'config': './dev/config.yaml',
+      'A2_B2': 42,
+    }
+
+    with pytest.raises(UnassignableError):
+      ConfigurationBuilder.assign(model_instance, assignment_set)
 

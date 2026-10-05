@@ -1,0 +1,7 @@
+logfile: /tmp/site.log
+server:
+  connection: ssl
+  private_key: ./certificates/ssl/key.pem
+  cert_key: ./certificates/ssl/site.crt
+  extra_cert_chain: ./pki/intermediate_ca.crt
+  port: 4443
