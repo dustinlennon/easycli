@@ -1,2 +1,2 @@
 #!/usr/bin/bash
-poetry run python3 "$@"
+uv run python3 "$@"

@@ -1,6 +1,8 @@
-/.env
-/dist/*
-/.vscode/*
+.env
+
+/dist
+/out
+/.vscode
 
 *png
 *pyc

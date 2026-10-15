@@ -10,39 +10,19 @@ from typing import (
   TYPE_CHECKING,
   Union
 )
-import warnings
 import yaml
 
 from easycli.configuration_builder import ConfigurationBuilder
 
 #
-# linter setup
+# > ConfigurableMixin
 #
-if TYPE_CHECKING: 
-  class ConfigurableInstance("ConfigurableModel", BaseModel, Protocol):
-    pass
-
-#
-# warnings setup
-#
-def custom_formatwarning(msg, category, filename, lineno, line=None):
-    return f"{filename}:{lineno}: {category.__name__}: {msg}\n"
-warnings.formatwarning = custom_formatwarning
-
-#
-# > ConfigurableModel
-#
-class ConfigurableModel(object):
-  prefix: str
-  model_config = ConfigDict(validate_assignment=True)
-
-  def __init__(self, **kwargs):
-    super().__init__(**kwargs)
-    ModelType = type(self)
-    self._builder = ConfigurationBuilder.build(ModelType)
+class ConfigurableMixin:
+  prefix        : str
+  model_config  : ConfigDict
 
   @classmethod
-  def from_yaml[T:ConfigurableInstance](
+  def from_yaml[T:"ConfigurableModel"](
       cls: type[T],
       yaml: str
     ) -> T:
@@ -52,24 +32,34 @@ class ConfigurableModel(object):
     return instance
 
   @classmethod
-  def from_yaml_source[T:ConfigurableInstance](
+  def from_yaml_source[T:"ConfigurableModel"](
       cls: type[T],
       yaml_source: Union[str, io.TextIOBase]
     ) -> T:
+    if issubclass(cls, BaseModel) == False:
+      raise TypeError("ConfigurableMixin requires a pydantic.BaseModel")
+
     if isinstance(yaml_source, io.TextIOBase):
       obj = yaml.safe_load(yaml_source)
     else:
       with open(yaml_source) as fp:
-        obj = yaml.safe_load(fp)       
-    return cls(**obj)
+        obj = yaml.safe_load(fp)
 
-  def update_from_dict[T:ConfigurableInstance](
+    instance = cls(**obj)
+    instance._builder = ConfigurationBuilder.build(cls)
+
+    return instance
+    
+  def update_from_dict[T:"ConfigurableModel"](
       self: T,
       args: dict[str, str],
       *,
       fallback: bool,
       discard: bool
     ) -> T:
+    if isinstance(self, BaseModel) == False:
+      raise TypeError("ConfigurableMixin requires a pydantic.BaseModel")
+
     assignment_set = { 
       k.removeprefix(self.prefix):v
       for k,v in args.items()
@@ -77,18 +67,26 @@ class ConfigurableModel(object):
     }
     return self._builder.apply_assignments(self, assignment_set, fallback = fallback, discard = discard)
 
-  def update_from_env[T:ConfigurableInstance](
+  def update_from_env[T:"ConfigurableModel"](
       self: T,
       env = None
     ) -> T:
     env = os.environ.copy() if env is None else env
     return self.update_from_dict(env, fallback = False, discard = False)
 
-  def update_from_args[T:ConfigurableInstance](
+  def update_from_args[T:"ConfigurableModel"](
       self: T,
-      args: argparse.Namespace,
-      fallback: bool = True,
-      discard: bool = False
+      args: argparse.Namespace
     ) -> T:
       return self.update_from_dict(vars(args), fallback = True, discard = False)
 
+#
+# > ConfigurableModel (annotation)
+#
+from pydantic._internal._model_construction import ModelMetaclass
+
+class _ConfigurableModelMeta(ModelMetaclass, type):
+  pass
+
+class ConfigurableModel(ConfigurableMixin, BaseModel, metaclass = _ConfigurableModelMeta):
+  pass

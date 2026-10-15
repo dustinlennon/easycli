@@ -1,10 +1,7 @@
-import json
 import pytest
 import textwrap
 from argparse import Namespace
-import yaml
 
-from easycli.configurable_model import ConfigurableModel
 from .site_config import *
 
 #

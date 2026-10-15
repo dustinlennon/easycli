@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import ClassVar, Literal, Union
 
-from easycli.configurable_model import ConfigurableModel
+from easycli.configurable_mixin import ConfigurableMixin
 
 #
 # SslConfig
@@ -23,7 +23,7 @@ class HttpConfig(BaseModel):
 #
 # SiteConfig
 #
-class SiteConfig(ConfigurableModel, BaseModel):
+class SiteConfig(ConfigurableMixin, BaseModel):
   prefix              : ClassVar[str] = "EXAMPLE_"
 
   logfile             : str = "/tmp/example.log"

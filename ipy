@@ -1,2 +1,2 @@
 #!/usr/bin/bash
-poetry run python3 -m IPython --no-autoindent
+uv run python3 -m IPython --no-autoindent
