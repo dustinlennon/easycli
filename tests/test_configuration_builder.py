@@ -103,7 +103,8 @@ class TestConfigurationBuilder:
       'A2_B2': 0,
       'A3_TIME': 10
     }
-    updated_model = builder.apply_assignments(model_instance, assignment_set, discard = False, fallback = False)
+    updated_config = builder.apply_assignments(model_instance, assignment_set, discard = False, fallback = False)
+    updated_model  = SimpleConfig(**updated_config)
 
     assert updated_model.a2.b2 == 0
     assert isinstance(updated_model.a3, Imperial)
@@ -122,7 +123,9 @@ class TestConfigurationBuilder:
       'A3_SPAN_WIDTH': 6
     }
     
-    updated_model = builder.apply_assignments(model_instance, assignment_set, discard = False, fallback = False)
+    updated_config = builder.apply_assignments(model_instance, assignment_set, discard = False, fallback = False)
+    updated_model  = SimpleConfig(**updated_config)
+
     assert isinstance(updated_model.a3, Metric)
     assert updated_model.a3.span.length == 5
     assert updated_model.a3.span.width == 6
@@ -136,7 +139,8 @@ class TestConfigurationBuilder:
       'A3_SYSTEM': 'MKS'
     }
     with pytest.raises(ValidationError):
-      updated_model = builder.apply_assignments(model_instance, assignment_set, discard = False, fallback = False)
+      updated_config = builder.apply_assignments(model_instance, assignment_set, discard = False, fallback = False)
+      updated_model  = SimpleConfig(**updated_config)
 
   def test_apply_assignments_dict(
       self,
@@ -152,7 +156,9 @@ class TestConfigurationBuilder:
         }
       }
     }  
-    updated_model = builder.apply_assignments(model_instance, assignment_set, discard = False, fallback = False)
+    updated_config = builder.apply_assignments(model_instance, assignment_set, discard = False, fallback = False)
+    updated_model  = SimpleConfig(**updated_config)
+
     assert isinstance(updated_model.a3, Metric)
     assert updated_model.a3.span.length == 5
     assert updated_model.a3.span.width == 6
@@ -165,7 +171,9 @@ class TestConfigurationBuilder:
     assignment_set = {
       'A3': '{"system":"MKS","time":60.0,"span":{"length":5,"width":6}}'
     }
-    updated_model = builder.apply_assignments(model_instance, assignment_set, discard = False, fallback = False)
+    updated_config = builder.apply_assignments(model_instance, assignment_set, discard = False, fallback = False)
+    updated_model  = SimpleConfig(**updated_config)
+
     assert isinstance(updated_model.a3, Metric)
     assert updated_model.a3.span.length == 5
     assert updated_model.a3.span.width == 6
@@ -189,6 +197,7 @@ class TestConfigurationBuilder:
     }
 
     updated_model = ConfigurationBuilder.assign(model_instance, assignment_set)
+
     assert updated_model.a2.b2 == 42
     assert updated_model.a3.system == 'FPS'
     assert isinstance(updated_model.a3, Imperial)

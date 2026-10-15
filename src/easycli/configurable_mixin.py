@@ -14,6 +14,9 @@ import yaml
 
 from easycli.configuration_builder import ConfigurationBuilder
 
+if TYPE_CHECKING:
+  from .configurable_model import ConfigurableModel
+
 #
 # > ConfigurableMixin
 #
@@ -22,7 +25,7 @@ class ConfigurableMixin:
   model_config  : ConfigDict
 
   @classmethod
-  def from_yaml[T:"ConfigurableModel"](
+  def from_yaml[T:ConfigurableModel](
       cls: type[T],
       yaml: str
     ) -> T:
@@ -32,7 +35,7 @@ class ConfigurableMixin:
     return instance
 
   @classmethod
-  def from_yaml_source[T:"ConfigurableModel"](
+  def from_yaml_source[T:ConfigurableModel](
       cls: type[T],
       yaml_source: Union[str, io.TextIOBase]
     ) -> T:
@@ -50,14 +53,16 @@ class ConfigurableMixin:
 
     return instance
     
-  def update_from_dict[T:"ConfigurableModel"](
+  def update_from_dict[T:ConfigurableModel](
       self: T,
       args: dict[str, str],
       *,
       fallback: bool,
       discard: bool
     ) -> T:
-    if isinstance(self, BaseModel) == False:
+    cls = type(self)
+
+    if issubclass(cls, BaseModel) == False:
       raise TypeError("ConfigurableMixin requires a pydantic.BaseModel")
 
     assignment_set = { 
@@ -65,28 +70,24 @@ class ConfigurableMixin:
       for k,v in args.items()
       if k.startswith(self.prefix)
     }
-    return self._builder.apply_assignments(self, assignment_set, fallback = fallback, discard = discard)
 
-  def update_from_env[T:"ConfigurableModel"](
+    updated_config = self._builder.apply_assignments(self, assignment_set, fallback = fallback, discard = discard)
+
+    instance = cls(**updated_config)
+    instance._builder = self._builder
+
+    return instance
+    
+  def update_from_env[T:ConfigurableModel](
       self: T,
       env = None
     ) -> T:
     env = os.environ.copy() if env is None else env
     return self.update_from_dict(env, fallback = False, discard = False)
 
-  def update_from_args[T:"ConfigurableModel"](
+  def update_from_args[T:ConfigurableModel](
       self: T,
       args: argparse.Namespace
     ) -> T:
       return self.update_from_dict(vars(args), fallback = True, discard = False)
 
-#
-# > ConfigurableModel (annotation)
-#
-from pydantic._internal._model_construction import ModelMetaclass
-
-class _ConfigurableModelMeta(ModelMetaclass, type):
-  pass
-
-class ConfigurableModel(ConfigurableMixin, BaseModel, metaclass = _ConfigurableModelMeta):
-  pass

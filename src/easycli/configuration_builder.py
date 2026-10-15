@@ -8,6 +8,7 @@ from typing import (
   Dict,
   overload,
   Type,
+  Self,
   Union
 )
 import warnings
@@ -22,14 +23,15 @@ from easycli.exceptions import (
   UnassignableError
 )
 
-
 class ConfigurationBuilder[B:BaseModel]:
   def __init__(
       self,
-      trie: Trie
+      ModelType: Type[B],
+      trie: Trie,
     ):
     warnings.warn("ConfigurationBuilder.__init__ is not intended to be called directly in client code")
-    self.trie = trie
+    self.trie       = trie
+    self.ModelType  = ModelType
 
   def __str__(self):
     return json.dumps(self.trie.root, cls = TrieNodeEncoder, indent = 2)
@@ -41,7 +43,7 @@ class ConfigurationBuilder[B:BaseModel]:
   def build[M:BaseModel](
       cls,
       ModelType: Type[M]
-    ) -> "ConfigurationBuilder[M]":
+    ) -> Self:
     trie = Trie()
 
     for pk in cls._path_search(ModelType):
@@ -49,7 +51,7 @@ class ConfigurationBuilder[B:BaseModel]:
 
     with warnings.catch_warnings():
       warnings.simplefilter('ignore')
-      instance = cls(trie)
+      instance = cls(ModelType, trie)
 
     return instance
 
@@ -123,16 +125,20 @@ class ConfigurationBuilder[B:BaseModel]:
       *,
       discard,
       fallback,
-    ) -> B:
-    ModelType = type(model_instance)
+    ) -> dict[str, str]:
+    if isinstance(model_instance, self.ModelType) == False:
+      raise TypeError(f"'model_instance' is not of type {self.ModelType.__name__}")
+    
     incremental_config  = self.compile_assignments(assignment_set)
+
     updated_config      = recursive_update(
       model_instance.model_dump(),
       incremental_config, 
       discard = discard,
       fallback = fallback
     )
-    return ModelType.model_validate(updated_config)
+
+    return updated_config
 
   @overload
   @classmethod
@@ -155,7 +161,10 @@ class ConfigurationBuilder[B:BaseModel]:
     cls,
     instance_or_type: Union[M, Type[M]],
     assignment_set: Dict[str, Any]
-  ) -> Union[B, Dict]:
+  ) -> Union[M, Dict]:
+    """
+    One-shot assignment
+    """
     if isinstance(instance_or_type, BaseModel):
       model_dict = instance_or_type.model_dump()
       ModelType = type(instance_or_type)

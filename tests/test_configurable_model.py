@@ -31,6 +31,8 @@ def site_config() -> SiteConfig:
 class TestSiteConfig:
   def test_from_yaml(self, site_config: SiteConfig):
     assert isinstance(site_config, SiteConfig)
+    assert isinstance(site_config, BaseModel)
+    assert isinstance(site_config, ConfigurableMixin)
 
   def test_from_env(self, site_config: SiteConfig):
     env = {
@@ -49,3 +51,18 @@ class TestSiteConfig:
     updated_config = site_config.update_from_args(args)
     assert isinstance(updated_config.server, HttpConfig)
     assert updated_config.logfile == '/tmp/site.log'
+
+  def test_chain(self, site_config: SiteConfig):
+    env = {
+      'EXAMPLE_SERVER_CONNECTION'  : 'http',
+      'EXAMPLE_LOGFILE'            : '/tmp/site-env.log'
+    }
+    args = Namespace(
+      EXAMPLE_LOGFILE = '/tmp/site-args.log'
+    )
+
+    sc_env  = site_config.update_from_env(env)
+    sc_args = sc_env.update_from_args(args)
+    
+
+
